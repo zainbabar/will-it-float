@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Will It Float?</title>
+<meta name="description" content="Play SCI 206 Group 114's buoyancy game: guess float or sink for six fruits and vegetables, watch each one drop, and see why.">
+<meta name="theme-color" content="#11161c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2311161c'/%3E%3Crect y='19' width='32' height='13' fill='%231f4a47'/%3E%3Ccircle cx='16' cy='17' r='8' fill='%23f08a1c'/%3E%3Crect y='18' width='32' height='2' fill='%23f3c41b'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil:wght@500..900&family=Big+Shoulders:wght@500..800&family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400&display=swap">
+<style>
+/* the page is a ship's hull: black topsides, a white boot-top stripe, red antifouling below, harbour water at the keel */
+:root {
+  --hull: #11161c;
+  --hull-2: #1a222b;
+  --seam: #232d38;
+  --boot: #eeece4;
+  --red: #8a2a1d;
+  --red-2: #74221a;
+  --red-seam: #9b3828;
+  --sea: #173b39;
+  --sea-2: #1f4a47;
+  --paint: #f2efe6;
+  --paint-soft: #b4bec6;
+  --paint-red: #f1d6cc;
+  --paint-sea: #bfd8d1;
+  --yellow: #f3c41b;
+  --yellow-2: #d9aa05;
+  --stencil: "Big Shoulders Stencil", "Big Shoulders", "Arial Narrow", sans-serif;
+  --label: "Big Shoulders", "Arial Narrow", sans-serif;
+  --body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
+  --gutter: max(16px, env(safe-area-inset-left, 0px));
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scrollbar-color: var(--yellow) var(--hull); -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--hull);
+  color: var(--paint);
+  font: 400 1.0625rem/1.55 var(--body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+::selection { background: var(--yellow); color: var(--hull); }
+:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+a { color: var(--yellow); text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: var(--gutter); }
+
+.topsides {
+  background: var(--hull);
+}
+
+/* top strip */
+.strip {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding-block: 14px 10px;
+  font: 600 0.9375rem/1 var(--label); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--paint-soft);
+}
+.strip nav { display: flex; gap: 18px; }
+.strip a { color: var(--paint-soft); text-decoration: none; padding-block: 6px; }
+.strip a:hover { color: var(--paint); }
+
+/* title */
+.title { padding-block: 10px 18px; }
+h1 {
+  font: 900 clamp(3.4rem, 15vw, 6rem)/0.84 var(--stencil);
+  text-transform: uppercase; letter-spacing: -0.01em;
+  margin: 0; color: var(--paint);
+}
+h1 .q { color: var(--yellow); }
+.lede { margin: 12px 0 0; max-width: 44ch; color: var(--paint-soft); font-size: 1.0625rem; }
+
+/* game: tank and panel */
+.game {
+  display: grid; gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "head" "tank" "act";
+  padding-bottom: 56px;
+}
+.head { grid-area: head; display: flex; justify-content: space-between; align-items: end; gap: 12px; }
+.tankwrap { grid-area: tank; position: relative; height: clamp(280px, 40vh, 360px); }
+.act { grid-area: act; min-width: 0; }
+
+.round { font: 700 0.9375rem/1 var(--label); letter-spacing: 0.1em; text-transform: uppercase; color: var(--paint-soft); margin: 0 0 6px; }
+.item-name { font: 800 clamp(2.2rem, 9vw, 3.4rem)/0.9 var(--stencil); text-transform: uppercase; margin: 0; }
+.tally { display: flex; gap: 5px; padding-bottom: 4px; }
+.tally span { width: 14px; height: 22px; border: 2px solid var(--paint-soft); opacity: 0.55; }
+.tally span.now { border-color: var(--yellow); opacity: 1; }
+.tally span.right { background: var(--yellow); border-color: var(--yellow); opacity: 1; }
+.tally span.wrong { border-color: var(--paint); opacity: 1; background: linear-gradient(to top right, transparent 44%, var(--paint) 44% 56%, transparent 56%); }
+
+canvas { display: block; width: 100%; height: 100%; }
+.tankwrap canvas { position: absolute; inset: 0; }
+
+.count {
+  position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  font: 900 clamp(6rem, 30vw, 11rem)/1 var(--stencil); color: var(--yellow);
+  opacity: 0;
+}
+.count.on { animation: tick 0.62s cubic-bezier(.16,1,.3,1) both; }
+@keyframes tick { from { opacity: 1; transform: scale(1.35); filter: blur(4px); } 30% { filter: blur(0); } to { opacity: 0.9; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .count.on { animation: none; opacity: 0.9; } }
+
+.prompt { margin: 0 0 12px; color: var(--paint-soft); }
+.calls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* painted plates: every control is a labelled plate */
+.plate {
+  appearance: none; border: 2px solid var(--yellow); border-radius: 2px;
+  background: var(--yellow); color: var(--hull);
+  font: 800 1.6rem/1 var(--stencil); letter-spacing: 0.04em; text-transform: uppercase;
+  min-height: 60px; padding: 12px 18px; cursor: pointer;
+  box-shadow: 0 5px 0 -1px var(--yellow-2), 0 8px 14px -6px rgba(0,0,0,.6);
+  transition: transform .12s ease-out, box-shadow .12s ease-out, background-color .2s;
+  touch-action: manipulation;
+}
+.plate:hover { background: #ffd22e; }
+.plate:active, .plate[aria-pressed="true"] { transform: translateY(4px); box-shadow: 0 1px 0 -1px var(--yellow-2), 0 2px 4px -2px rgba(0,0,0,.6); }
+.plate:disabled { cursor: default; }
+.plate:disabled:not([aria-pressed="true"]) { background: transparent; color: var(--paint-soft); border-color: var(--seam); box-shadow: none; }
+.plate.ghost { background: transparent; color: var(--paint); border-color: var(--paint); box-shadow: none; }
+.plate.ghost:hover { background: rgba(242,239,230,.08); }
+.plate.small { font-size: 1.2rem; min-height: 48px; padding: 10px 16px; }
+
+/* reveal */
+.verdict { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 10px; }
+.verdict b { font: 900 2.6rem/0.9 var(--stencil); text-transform: uppercase; }
+.verdict b.floats { color: var(--paint-sea); }
+.verdict b.sinks { color: #f08c74; }
+.verdict span { font: 700 1.1rem/1.2 var(--label); letter-spacing: 0.06em; text-transform: uppercase; }
+.verdict span.right { color: var(--yellow); }
+.verdict span.wrong { color: var(--paint-soft); }
+.why { margin: 0 0 16px; max-width: 60ch; }
+.next-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+
+/* density ruler: where the item sits against water on one scale */
+.ruler { position: relative; height: 66px; margin: 6px 0 4px; }
+.ruler .bar { position: absolute; left: 0; right: 0; top: 30px; height: 2px; background: var(--paint-soft); }
+.ruler .tk { position: absolute; top: 24px; width: 1px; height: 14px; background: var(--paint-soft); }
+.ruler .tk.minor { top: 27px; height: 8px; opacity: .6; }
+.ruler .num { position: absolute; top: 42px; transform: translateX(-50%); font: 600 0.8125rem/1 var(--label); color: var(--paint-soft); font-variant-numeric: tabular-nums; }
+.ruler .zone { position: absolute; top: 0; font: 700 0.75rem/1 var(--label); letter-spacing: .1em; text-transform: uppercase; color: var(--paint-soft); }
+.ruler .zone.l { left: 0; } .ruler .zone.r { right: 0; }
+.ruler .water { position: absolute; top: 16px; height: 24px; width: 3px; margin-left: -1px; background: var(--paint-sea); transition: left .35s cubic-bezier(.16,1,.3,1); }
+.ruler .water i { position: absolute; top: -14px; left: 6px; white-space: nowrap; font: 700 0.75rem/1 var(--label); letter-spacing: .08em; color: var(--paint-sea); font-style: normal; text-transform: uppercase; }
+.ruler .pin { position: absolute; top: 16px; margin-left: -8px; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 12px solid var(--yellow); transition: left .35s cubic-bezier(.16,1,.3,1); }
+.readings { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; font: 600 1rem/1.3 var(--label); letter-spacing: .04em; text-transform: uppercase; color: var(--paint-soft); }
+.readings b { color: var(--paint); font: 800 1.35rem/1 var(--stencil); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+
+/* end of game */
+.score { font: 900 clamp(3.4rem, 14vw, 5rem)/0.85 var(--stencil); margin: 0 0 6px; }
+.score small { font-size: .45em; color: var(--paint-soft); }
+.results { list-style: none; padding: 0; margin: 14px 0 0; border-top: 1px solid var(--seam); }
+.results li { display: grid; grid-template-columns: 1fr auto 26px; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--seam); font: 700 1.05rem/1.2 var(--label); letter-spacing: .04em; text-transform: uppercase; }
+.results .fl { color: var(--paint-sea); } .results .sk { color: #f08c74; }
+.results svg { width: 22px; height: 22px; }
+
+/* boot-top: the white stripe at the waterline */
+.boot { height: 14px; background: var(--boot); box-shadow: 0 -6px 0 var(--hull), 0 6px 0 var(--red-2); }
+
+/* sections below the waterline */
+.below { padding-block: 80px 72px; }
+.antifoul {
+  background: var(--red);
+  color: var(--paint);
+}
+.antifoul .soft { color: var(--paint-red); }
+h2 {
+  font: 900 clamp(2.6rem, 10vw, 4.6rem)/0.88 var(--stencil);
+  text-transform: uppercase; letter-spacing: -0.005em;
+  margin: 0 0 18px; max-width: 14ch; text-wrap: balance;
+}
+.prose { max-width: 62ch; }
+.prose p { margin: 0 0 1em; }
+
+.lab { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr); margin-top: 32px; }
+.lab .tankwrap { grid-area: auto; height: clamp(280px, 44vh, 400px); }
+.picks { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; padding: 0; border: 0; }
+.picks legend, .ctl label, .ctl .lbl { font: 700 0.9375rem/1.2 var(--label); letter-spacing: .1em; text-transform: uppercase; color: var(--paint-red); margin-bottom: 10px; padding: 0; }
+.picks label { position: relative; }
+.picks input { position: absolute; opacity: 0; pointer-events: none; }
+.picks span {
+  display: inline-block; padding: 9px 12px; border: 2px solid var(--paint-red); border-radius: 2px;
+  font: 700 1rem/1 var(--label); letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+  transition: background-color .15s, color .15s;
+}
+.picks input:checked + span { background: var(--yellow); border-color: var(--yellow); color: var(--hull); }
+.picks input:focus-visible + span { outline: 3px solid var(--yellow); outline-offset: 3px; }
+.picks span:hover { background: rgba(255,255,255,.08); }
+.ctl { margin-bottom: 22px; }
+.ctl .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.ctl output { font: 800 1.4rem/1 var(--stencil); font-variant-numeric: tabular-nums; }
+
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 36px; background: transparent; margin: 4px 0 0; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: var(--red-2); border: 1px solid var(--paint-red); }
+input[type="range"]::-moz-range-track { height: 6px; background: var(--red-2); border: 1px solid var(--paint-red); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 30px; margin-top: -13px; background: var(--yellow); border: 2px solid var(--hull); border-radius: 2px; }
+input[type="range"]::-moz-range-thumb { width: 18px; height: 26px; background: var(--yellow); border: 2px solid var(--hull); border-radius: 2px; }
+input[type="range"]:focus-visible { outline: none; }
+input[type="range"]:focus-visible::-webkit-slider-thumb { outline: 3px solid var(--paint); outline-offset: 2px; }
+
+.antifoul .ruler .bar, .antifoul .ruler .tk { background: var(--paint-red); }
+.antifoul .ruler .num, .antifoul .ruler .zone { color: var(--paint-red); }
+.antifoul .readings { color: var(--paint-red); }
+.lab-out { font: 900 2.2rem/1 var(--stencil); text-transform: uppercase; margin: 14px 0 4px; }
+.lab-out small { display: block; font: 700 1.05rem/1.3 var(--label); letter-spacing: .06em; color: var(--paint-red); margin-top: 6px; }
+.lab-notes { margin-top: 48px; display: grid; gap: 8px 48px; grid-template-columns: minmax(0, 1fr); }
+.lab-notes h3, .home h3 { font: 800 1.5rem/1 var(--stencil); text-transform: uppercase; letter-spacing: .02em; margin: 0 0 10px; }
+.lab-notes p { margin: 0 0 1em; max-width: 60ch; }
+
+/* harbour water at the keel */
+.harbour { background: var(--sea); color: var(--paint); }
+.harbour .soft { color: var(--paint-sea); }
+.home { display: grid; gap: 40px; grid-template-columns: minmax(0, 1fr); margin-top: 28px; }
+.need { margin: 0; padding: 0; list-style: none; border-top: 1px solid rgba(191,216,209,.3); }
+.need li { padding: 10px 0; border-bottom: 1px solid rgba(191,216,209,.3); }
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 10px; padding: 0 0 16px; }
+.steps li::before { content: counter(s); font: 900 2.2rem/0.9 var(--stencil); color: var(--yellow); }
+.extra { list-style: none; margin: 0; padding: 0; }
+.extra li { padding: 12px 0; border-bottom: 1px solid rgba(191,216,209,.3); }
+.extra b { display: block; font: 800 1.15rem/1.1 var(--label); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 2px; }
+
+.keel { background: #0d1f1e; color: var(--paint-sea); padding-block: 36px 44px; font-size: 0.9375rem; }
+.keel p { margin: 0 0 8px; max-width: 70ch; }
+.keel .mark { font: 900 1.6rem/1 var(--stencil); color: var(--paint); text-transform: uppercase; margin-bottom: 12px; }
+
+/* draft marks painted up the side of the page, wide screens only */
+.draft { display: none; }
+@media (min-width: 1240px) {
+  .draft { display: block; position: absolute; top: 0; right: 22px; width: 52px; pointer-events: none; }
+  .draft span { position: absolute; right: 0; font: 800 26px/1 var(--stencil); color: var(--paint); opacity: .26; }
+  .draft span.m { opacity: .5; font-size: 30px; }
+}
+
+@media (min-width: 860px) {
+  .title { padding-block: 26px 28px; }
+  .game {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    grid-template-areas: "tank head" "tank act";
+    grid-template-rows: auto 1fr;
+    column-gap: 44px; row-gap: 18px;
+  }
+  .head { align-self: end; }
+  .tankwrap { height: auto; min-height: 460px; }
+  .lab { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 48px; align-items: start; }
+  .lab .tankwrap { height: 440px; position: sticky; top: 24px; }
+  .lab-notes { grid-template-columns: 1fr 1fr; }
+  .home { grid-template-columns: 1fr 1.2fr 1fr; gap: 48px; }
+}
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="draft" id="draft" aria-hidden="true"></div>
+
+<div class="topsides">
+  <div class="wrap">
+    <header class="strip">
+      <span>SCI 206 &middot; Group 114</span>
+      <nav aria-label="Sections"><a href="#play">Play</a><a href="#lab">Lab</a><a href="#home">At home</a></nav>
+    </header>
+
+    <main>
+      <section id="play" aria-labelledby="t">
+        <div class="title">
+          <h1 id="t">Will it float<span class="q">?</span></h1>
+          <p class="lede">Six things from the grocery store go into a bin of water. Before each one drops, make your call. Then see why it did what it did.</p>
+        </div>
+
+        <div class="game">
+          <div class="head">
+            <div>
+              <p class="round" id="round">Round 1 of 6</p>
+              <h2 class="item-name" id="itemName">Potato</h2>
+            </div>
+            <div class="tally" id="tally" aria-hidden="true"></div>
+          </div>
+
+          <div class="tankwrap">
+            <canvas id="tank" role="img" aria-label="A clear bin of water with a potato hanging above it."></canvas>
+            <div class="count" id="count" aria-hidden="true"></div>
+          </div>
+
+          <div class="act" id="act" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="boot" aria-hidden="true"></div>
+
+<section class="antifoul below" id="lab" aria-labelledby="labT">
+  <div class="wrap">
+    <h2 id="labT">Change the fruit, change the water</h2>
+    <div class="prose">
+      <p class="soft">Pick something, then change how much air is trapped inside it and how much salt is in the water. The tank works out the average density and lets physics do the rest. Try getting a potato off the bottom.</p>
+    </div>
+
+    <div class="lab">
+      <div class="tankwrap">
+        <canvas id="labTank" role="img" aria-label="Lab tank."></canvas>
+      </div>
+
+      <div>
+        <fieldset class="picks" id="picks">
+          <legend>Drop in</legend>
+        </fieldset>
+
+        <div class="ctl">
+          <div class="row"><label for="air">Air trapped inside</label><output id="airOut" for="air">0%</output></div>
+          <input type="range" autocomplete="off" id="air" min="0" max="30" step="1" value="1">
+        </div>
+        <div class="ctl">
+          <div class="row"><label for="salt">Salt in 1 cup of water</label><output id="saltOut" for="salt">0 tbsp</output></div>
+          <input type="range" autocomplete="off" id="salt" min="0" max="6" step="0.5" value="0">
+        </div>
+
+        <div class="ruler" id="labRuler"></div>
+        <p class="readings" id="labRead"></p>
+        <p class="lab-out" id="labOut" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="lab-notes">
+      <div>
+        <h3>Why it stops where it stops</h3>
+        <p>Water pushes up on anything in it. That push, the buoyant force, equals the weight of the water the object shoves aside. A floating object settles lower and lower until it has pushed aside its own weight in water, then it stops. An orange with its peel on is about 0.87 times as dense as water, so it rides with about 87% of itself underwater.</p>
+        <p>If an object goes all the way under and still hasn't pushed aside its own weight, nothing more can hold it up, and it sinks to the bottom.</p>
+      </div>
+      <div>
+        <h3>Why salt helps</h3>
+        <p>Salt makes water denser, so every cupful pushed aside weighs more and pushes up harder. Stir in enough and the potato floats. Ships feel the same thing: a cargo ship rides higher in the ocean than in a river, and its hull carries a painted load line with separate marks for fresh water and sea water.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="harbour below" id="home" aria-labelledby="homeT">
+  <div class="wrap">
+    <h2 id="homeT">Run it in your kitchen</h2>
+    <p class="soft prose">Everything here costs a few dollars at the grocery store. Get a friend to call float or sink before each drop.</p>
+    <div class="home">
+      <div>
+        <h3>You need</h3>
+        <ul class="need">
+          <li>A clear bin or a big bowl</li>
+          <li>Water, about two-thirds full</li>
+          <li>A potato, a cantaloupe, grapes, an orange, a grapefruit</li>
+          <li>Salt and a tall glass, for the bonus round</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Steps</h3>
+        <ol class="steps">
+          <li><span>Fill the bin with room-temperature water.</span></li>
+          <li><span>Hold each item above the water and have everyone call it.</span></li>
+          <li><span>Lower it in gently. Look at how much of it sits under the waterline.</span></li>
+          <li><span>Peel the orange and try it again. Then peel the grapefruit.</span></li>
+          <li><span>Put a grape in the glass of water and stir in salt one spoonful at a time. Count the spoonfuls until it rises.</span></li>
+        </ol>
+      </div>
+      <div>
+        <h3>Then try</h3>
+        <ul class="extra">
+          <li><b>An apple</b>Floats. About a quarter of an apple is air.</li>
+          <li><b>A lemon and a lime</b>The lemon usually floats and the lime often sinks. Guess which before you look it up.</li>
+          <li><b>An egg</b>Sinks in tap water. Keep adding salt and it comes up.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="keel">
+  <div class="wrap">
+    <p class="mark">Will it float?</p>
+    <p>Made by Group 114 for SCI 206, The Physics of How Things Work, at the University of Waterloo, fall 2026. The game follows the order and explanations from our video.</p>
+    <p>Densities on this page are approximate. Real fruit varies with ripeness and size, so your results at home may not match every time. The orange test is adapted from <a href="https://www.playdoughtoplato.com/orange-buoyancy-science-experiment/">Orange Buoyancy Science Experiment</a> on Playdough To Plato.</p>
+  </div>
+</footer>
+
+<script>
+// the six rounds, in the same order as the video. density = flesh density x (1 - share of volume that is air)
+const ITEMS = [
+  { id: 'potato', name: 'Potato', flesh: 1.09, air: 0.01, r: 0.62,
+    prompt: 'A potato, straight from the bag.',
+    why: 'The potato sinks. It is packed with starch and water and has almost no air inside, so its average density is about 1.08 g/cm³, a bit more than water. The water it pushes aside weighs less than the potato, so the buoyant force can’t hold it up.' },
+  { id: 'cantaloupe', name: 'Cantaloupe', flesh: 1.03, air: 0.10, r: 1.0,
+    prompt: 'The biggest and heaviest thing in the bag.',
+    why: 'It floats. Even though the cantaloupe weighs quite a bit, its average density is lower than water. The inside of a cantaloupe has air spaces around the seeds, and that trapped air is what brings its density down. So the cantaloupe can push aside enough water for the buoyant force to balance its weight, and it floats.' },
+  { id: 'grapes', name: 'Grapes', flesh: 1.07, air: 0, r: 0.56,
+    prompt: 'A small bunch. The lightest thing here.',
+    why: 'The grapes sink, even though they’re the lightest thing in the game. Weight alone doesn’t decide it. A grape is sugary juice packed tight inside a thin skin with no air pockets, and sugar water is denser than plain water. At about 1.07 g/cm³, every grape sinks.' },
+  { id: 'orange', name: 'Orange', flesh: 1.04, air: 0.16, r: 0.6,
+    prompt: 'An orange, peel on.',
+    why: 'The orange floats! The peel has lots of tiny pockets of air, and those air spaces lower the orange’s average density below water’s. Like the cantaloupe, the orange can push aside enough water for the buoyant force to balance its weight.' },
+  { id: 'peeled', name: 'Peeled orange', flesh: 1.04, air: 0, r: 0.53,
+    prompt: 'The same orange with its peel off.',
+    why: 'With the peel off, the same orange sinks. The peel was where the air was. Without those air pockets, the juicy flesh left behind is a little denser than water, so the buoyant force can no longer balance its weight.' },
+  { id: 'grapefruit', name: 'Peeled grapefruit', flesh: 1.03, air: 0.06, r: 0.78,
+    prompt: 'Peeled, just like the orange that sank.',
+    why: 'After the peeled orange, why didn’t the peeled grapefruit sink? A grapefruit peel has tiny air pockets like an orange’s, but the fruit itself also holds more trapped air inside than an orange does. That extra air keeps the average density low enough for the peeled grapefruit to float.' }
+];
+const density = it => it.flesh * (1 - it.air);
+const fmt = d => d.toFixed(2);
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// small seeded random so every fruit is drawn the same way each frame
+function rng(seed) {
+  let s = seed >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+function shade(ctx, R) {
+  // light from the top left, the bottom right in shadow
+  const g = ctx.createRadialGradient(-R * 0.4, -R * 0.45, R * 0.1, 0, 0, R * 1.15);
+  g.addColorStop(0, 'rgba(255,255,255,0.28)');
+  g.addColorStop(0.5, 'rgba(255,255,255,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.38)');
+  ctx.fillStyle = g;
+  ctx.fill();
+}
+
+const DRAW = {
+  potato(ctx, R) {
+    const rand = rng(7);
+    ctx.beginPath();
+    for (let i = 0; i <= 40; i++) {
+      const a = (i / 40) * Math.PI * 2;
+      const wob = 1 + 0.05 * Math.sin(a * 3 + 1) + 0.03 * Math.sin(a * 5);
+      const x = Math.cos(a) * R * 1.18 * wob, y = Math.sin(a) * R * 0.86 * wob;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#b8874f';
+    ctx.fill();
+    ctx.save(); ctx.clip();
+    for (let i = 0; i < 60; i++) {
+      ctx.fillStyle = rand() > 0.5 ? 'rgba(90,55,25,0.35)' : 'rgba(230,200,150,0.25)';
+      ctx.beginPath(); ctx.arc((rand() - 0.5) * R * 2.2, (rand() - 0.5) * R * 1.6, 1 + rand() * 1.6, 0, 7); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(70,40,15,0.7)'; ctx.lineWidth = 1.6;
+    for (const [x, y] of [[-0.5, -0.2], [0.35, 0.25], [0.7, -0.35], [-0.15, 0.45]]) {
+      ctx.beginPath(); ctx.arc(x * R, y * R, R * 0.07, 0.2, 2.6); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.beginPath(); ctx.ellipse(0, 0, R * 1.18, R * 0.86, 0, 0, 7); shade(ctx, R * 1.1);
+  },
+  cantaloupe(ctx, R) {
+    const rand = rng(21);
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7);
+    ctx.fillStyle = '#b59f62'; ctx.fill();
+    ctx.save(); ctx.clip();
+    // the netting on the rind
+    ctx.strokeStyle = 'rgba(238,226,190,0.85)'; ctx.lineWidth = 1.3;
+    for (let i = 0; i < 170; i++) {
+      let x = (rand() - 0.5) * R * 2.1, y = (rand() - 0.5) * R * 2.1;
+      ctx.beginPath(); ctx.moveTo(x, y);
+      for (let k = 0; k < 3; k++) { x += (rand() - 0.5) * R * 0.22; y += (rand() - 0.5) * R * 0.22; ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(120,130,70,0.35)'; ctx.lineWidth = 2;
+    for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.ellipse(0, 0, R * Math.abs(i) * 0.33 + 1, R, 0, 0, 7); ctx.stroke(); }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(0, -R * 0.94, R * 0.07, 0, 7); ctx.fillStyle = '#6d6233'; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); shade(ctx, R);
+  },
+  grapes(ctx, R) {
+    const g = R * 0.27;
+    const rows = [[0, -0.62, 3], [0, -0.2, 4], [0, 0.22, 3], [0, 0.6, 2], [0, 0.9, 1]];
+    ctx.strokeStyle = '#6b5a2e'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, -R * 0.78); ctx.quadraticCurveTo(R * 0.1, -R * 1.05, R * 0.25, -R * 1.12); ctx.stroke();
+    for (const [, yy, n] of rows) {
+      for (let i = 0; i < n; i++) {
+        const x = (i - (n - 1) / 2) * g * 1.7, y = yy * R;
+        ctx.beginPath(); ctx.arc(x, y, g, 0, 7);
+        ctx.fillStyle = '#5d2a52'; ctx.fill();
+        ctx.save(); ctx.translate(x, y); ctx.beginPath(); ctx.arc(0, 0, g, 0, 7); shade(ctx, g); ctx.restore();
+        ctx.beginPath(); ctx.arc(x - g * 0.35, y - g * 0.35, g * 0.18, 0, 7); ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fill();
+      }
+    }
+  },
+  orange(ctx, R) {
+    const rand = rng(3);
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7);
+    ctx.fillStyle = '#ee8619'; ctx.fill();
+    ctx.save(); ctx.clip();
+    for (let i = 0; i < 140; i++) {
+      ctx.fillStyle = 'rgba(160,70,0,0.35)';
+      ctx.beginPath(); ctx.arc((rand() - 0.5) * R * 2, (rand() - 0.5) * R * 2, 0.9 + rand() * 0.8, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(R * 0.05, -R * 0.92, R * 0.08, 0, 7); ctx.fillStyle = '#4f6b2a'; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); shade(ctx, R);
+  },
+  peeled(ctx, R) {
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7);
+    ctx.fillStyle = '#f2a23f'; ctx.fill();
+    ctx.save(); ctx.clip();
+    // segments meet at the top and bottom like lines of longitude
+    ctx.strokeStyle = 'rgba(255,233,190,0.85)'; ctx.lineWidth = 1.6;
+    for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.ellipse(0, 0, Math.abs(i) * R * 0.3 + 0.5, R, 0, 0, 7); ctx.stroke(); }
+    const rand = rng(11);
+    ctx.strokeStyle = 'rgba(255,250,235,0.55)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 24; i++) {
+      const x = (rand() - 0.5) * R * 1.8, y = (rand() - 0.5) * R * 1.8;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (rand() - 0.5) * 10, y + (rand() - 0.5) * 14); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); shade(ctx, R);
+  },
+  grapefruit(ctx, R) {
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7);
+    ctx.fillStyle = '#e06c58'; ctx.fill();
+    ctx.save(); ctx.clip();
+    ctx.strokeStyle = 'rgba(255,225,210,0.8)'; ctx.lineWidth = 2;
+    for (let i = -4; i <= 4; i++) { ctx.beginPath(); ctx.ellipse(0, 0, Math.abs(i) * R * 0.24 + 0.5, R, 0, 0, 7); ctx.stroke(); }
+    const rand = rng(5);
+    ctx.strokeStyle = 'rgba(255,248,240,0.5)'; ctx.lineWidth = 1.2;
+    for (let i = 0; i < 30; i++) {
+      const x = (rand() - 0.5) * R * 1.8, y = (rand() - 0.5) * R * 1.8;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (rand() - 0.5) * 12, y + (rand() - 0.5) * 16); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); shade(ctx, R);
+  }
+};
+
+// a clear bin of water with a real 1d buoyancy simulation inside
+class Tank {
+  constructor(canvas, onSettle) {
+    this.c = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.onSettle = onSettle;
+    this.item = null;
+    this.rhoItem = 1;
+    this.rhoWater = 1;
+    this.phase = 'empty';
+    this.cols = new Float32Array(64);
+    this.colV = new Float32Array(64);
+    this.drops = [];
+    this.bubbles = [];
+    this.calm = 0;
+    this.t = 0;
+    new ResizeObserver(() => this.resize()).observe(canvas);
+    this.resize();
+    this.last = performance.now();
+    const loop = now => {
+      const dt = Math.min(0.05, (now - this.last) / 1000);
+      this.last = now;
+      if (this.visible !== false) { this.step(dt); this.draw(); }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+    new IntersectionObserver(es => { this.visible = es[0].isIntersecting; }).observe(canvas);
+  }
+  resize() {
+    const r = this.c.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.W = r.width; this.H = r.height;
+    this.c.width = Math.round(r.width * dpr); this.c.height = Math.round(r.height * dpr);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // bin geometry
+    this.left = Math.max(10, this.W * 0.07);
+    this.right = this.W - this.left;
+    this.floor = this.H - 14;
+    this.unit = Math.min(this.W * 0.15, this.H * 0.17, 74);
+    this.surf0 = Math.max(this.H * 0.36, this.unit * 2 + 44);
+    if (this.item) this.R = this.item.r * this.unit;
+    if (this.phase === 'hang') this.y = this.hangY();
+  }
+  hangY() { return Math.max(this.R + 6, this.surf0 - this.R - 26); }
+  load(item, rhoItem) {
+    this.item = item;
+    this.rhoItem = rhoItem;
+    this.R = item.r * this.unit;
+    this.phase = 'hang';
+    this.y = this.hangY();
+    this.v = 0;
+    this.calm = 0;
+    this.drops = []; this.bubbles = [];
+  }
+  drop() { this.phase = 'fall'; this.v = 0; this.calm = 0; }
+  sub() {
+    // how deep the object sits below the (moving) surface, and what fraction of its volume that is
+    const S = this.surface();
+    const h = Math.min(2 * this.R, Math.max(0, this.y + this.R - S));
+    return { h, f: (h * h * (3 * this.R - h)) / (4 * this.R ** 3) };
+  }
+  surface() {
+    // displaced water lifts the level a little, scaled down from 2d so it reads without flooding the bin
+    if (!this.item || this.phase === 'hang' || this.phase === 'empty') return this.surf0;
+    const R = this.R, S0 = this.surf0;
+    const h = Math.min(2 * R, Math.max(0, this.y + R - S0));
+    const area = R * R * Math.acos((R - h) / R) - (R - h) * Math.sqrt(Math.max(0, 2 * R * h - h * h));
+    return S0 - (area / (this.right - this.left)) * 0.45;
+  }
+  splash(x, power) {
+    const n = this.cols.length;
+    const i = Math.round(((x - this.left) / (this.right - this.left)) * (n - 1));
+    for (let k = -3; k <= 3; k++) {
+      const j = i + k;
+      if (j >= 0 && j < n) this.colV[j] += power * (k === 0 ? 1 : 0.5 / Math.abs(k));
+    }
+    if (reduced) return;
+    const count = Math.min(26, Math.round(power / 18));
+    for (let k = 0; k < count; k++) {
+      this.drops.push({ x: x + (Math.random() - 0.5) * this.R * 1.6, y: this.surface(), vx: (Math.random() - 0.5) * 220, vy: -120 - Math.random() * power * 0.9, life: 1 });
+    }
+  }
+  step(dt) {
+    this.t += dt;
+    const sub0 = this.item ? this.sub().h : 0;
+    if (this.phase === 'fall' || this.phase === 'settled') {
+      // fixed substeps keep the spring of the surface stable
+      const n = 6, h = dt / n, G = 2300, DRAG = 3.4;
+      for (let s = 0; s < n; s++) {
+        const { f } = this.sub();
+        const a = G * (1 - (this.rhoWater / this.rhoItem) * f) - this.v * (DRAG * f + 0.05);
+        this.v += a * h;
+        this.y += this.v * h;
+        if (this.y + this.R > this.floor) { this.y = this.floor - this.R; if (this.v > 0) this.v = -this.v * 0.12; }
+        this.lastA = a;
+      }
+      const now = this.sub();
+      if (sub0 === 0 && now.h > 0 && this.v > 150) this.splash(this.W / 2, this.v * 0.55);
+      if (now.f > 0.95 && Math.abs(this.v) > 120 && Math.random() < 0.5 && !reduced) {
+        this.bubbles.push({ x: this.W / 2 + (Math.random() - 0.5) * this.R, y: this.y - this.R * 0.5, r: 1.5 + Math.random() * 3 });
+      }
+      // a moving object nudges the surface it crosses
+      if (now.h > 0 && now.h < 2 * this.R) this.splash(this.W / 2, this.v * dt * 4);
+      if (this.phase === 'fall') {
+        this.calm = Math.abs(this.v) < 9 ? this.calm + dt : 0;
+        if (this.calm > 0.35) { this.phase = 'settled'; this.onSettle && this.onSettle(); }
+      }
+    } else if (this.phase === 'hang') {
+      this.y = this.hangY() + Math.sin(this.t * 2.2) * 2.5;
+    }
+    // surface waves: each column springs back to rest and pulls on its neighbours
+    const c = this.cols, v = this.colV, n = c.length;
+    for (let i = 0; i < n; i++) {
+      const l = c[Math.max(0, i - 1)], r = c[Math.min(n - 1, i + 1)];
+      v[i] += ((l + r) / 2 - c[i]) * 900 * dt - c[i] * 60 * dt;
+      v[i] *= Math.pow(0.06, dt);
+    }
+    for (let i = 0; i < n; i++) c[i] += v[i] * dt;
+    for (const d of this.drops) { d.vy += 1400 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.life -= dt * 1.2; }
+    this.drops = this.drops.filter(d => d.life > 0 && d.y < this.surface() + 4);
+    for (const b of this.bubbles) { b.y -= 70 * dt; b.x += Math.sin(this.t * 6 + b.r) * 0.3; }
+    this.bubbles = this.bubbles.filter(b => b.y > this.surface());
+  }
+  waterColor() {
+    // salt water reads a little paler and greener
+    const k = Math.min(1, (this.rhoWater - 1) / 0.2);
+    const mix = (a, b) => Math.round(a + (b - a) * k);
+    return [mix(38, 70), mix(112, 140), mix(118, 120)];
+  }
+  draw() {
+    const ctx = this.ctx, W = this.W, H = this.H, L = this.left, Rt = this.right, F = this.floor;
+    ctx.clearRect(0, 0, W, H);
+    const S = this.surface();
+    const n = this.cols.length;
+    const sx = i => L + (i / (n - 1)) * (Rt - L);
+
+    // back wall of the bin
+    // the bin is lined dark so the water reads the same on any section colour
+    ctx.fillStyle = '#161d25';
+    ctx.fillRect(L, H * 0.06, Rt - L, F - H * 0.06);
+
+    // draft marks up the left wall: numbers count up from the floor like a hull's
+    const step = (F - S) / 5;
+    ctx.font = '700 13px "Big Shoulders Stencil", "Big Shoulders", sans-serif';
+    ctx.textBaseline = 'middle';
+    for (let k = 0; k <= 7; k++) {
+      const y = F - k * step;
+      if (y < H * 0.08) break;
+      ctx.fillStyle = 'rgba(242,239,230,0.55)';
+      ctx.fillRect(L + 3, y - 1, k % 2 ? 7 : 12, 2);
+      if (k % 2 === 0 && k > 0) ctx.fillText(String(k * 2), L + 16, y);
+    }
+
+    // string the item hangs from before the drop
+    if (this.item && this.phase === 'hang') {
+      ctx.strokeStyle = 'rgba(242,239,230,0.6)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, this.y - this.R * 0.95); ctx.stroke();
+    }
+
+    // the item itself
+    if (this.item) {
+      ctx.save();
+      ctx.translate(W / 2, this.y);
+      ctx.rotate(this.phase === 'hang' ? Math.sin(this.t * 1.6) * 0.04 : Math.max(-0.3, Math.min(0.3, this.v * 0.0004)) + Math.sin(this.t * 0.9) * 0.02);
+      DRAW[this.item.id](ctx, this.R);
+      ctx.restore();
+    }
+
+    // water over the item, so whatever sits below the line reads as underwater
+    const [r, g, b] = this.waterColor();
+    ctx.beginPath();
+    ctx.moveTo(L, F);
+    for (let i = 0; i < n; i++) ctx.lineTo(sx(i), S + this.cols[i]);
+    ctx.lineTo(Rt, F);
+    ctx.closePath();
+    const wg = ctx.createLinearGradient(0, S, 0, F);
+    wg.addColorStop(0, `rgba(${r},${g},${b},0.58)`);
+    wg.addColorStop(1, `rgba(${r - 18},${g - 40},${b - 40},0.82)`);
+    ctx.fillStyle = wg; ctx.fill();
+
+    // bright surface line
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) i ? ctx.lineTo(sx(i), S + this.cols[i]) : ctx.moveTo(sx(i), S + this.cols[i]);
+    ctx.strokeStyle = 'rgba(214,240,232,0.85)'; ctx.lineWidth = 2; ctx.stroke();
+
+    for (const bb of this.bubbles) { ctx.beginPath(); ctx.arc(bb.x, bb.y, bb.r, 0, 7); ctx.strokeStyle = 'rgba(220,245,240,0.6)'; ctx.lineWidth = 1; ctx.stroke(); }
+    for (const d of this.drops) { ctx.fillStyle = `rgba(214,240,232,${Math.max(0, d.life) * 0.9})`; ctx.fillRect(d.x - 1.5, d.y - 1.5, 3, 3); }
+
+    // bin walls: clear plastic, drawn as two bright edges and a floor
+    ctx.strokeStyle = 'rgba(242,239,230,0.75)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(L - 4, H * 0.06); ctx.lineTo(L, F - 8); ctx.quadraticCurveTo(L, F, L + 8, F);
+    ctx.lineTo(Rt - 8, F); ctx.quadraticCurveTo(Rt, F, Rt, F - 8); ctx.lineTo(Rt + 4, H * 0.06);
+    ctx.stroke();
+
+    // the draft reading once it has settled: a load-line yellow mark where the water crosses it
+    if (this.item && this.phase === 'settled') {
+      const { f } = this.sub();
+      const onFloor = this.y + this.R >= F - 0.5 && f > 0.999;
+      const tag = onFloor ? 'ON THE BOTTOM' : `${Math.round(f * 100)}% UNDER`;
+      const yl = onFloor ? F - 2 : S;
+      ctx.fillStyle = '#f3c41b';
+      ctx.fillRect(W / 2 - this.R - 10, yl - 1.5, this.R * 2 + 20, 3);
+      ctx.font = '800 15px "Big Shoulders Stencil", "Big Shoulders", sans-serif';
+      ctx.textBaseline = 'bottom';
+      const tw = ctx.measureText(tag).width;
+      const tx = Math.min(Rt - tw - 8, W / 2 + this.R + 14);
+      ctx.fillText(tag, tx, yl - 6);
+    }
+  }
+}
+
+// density ruler: 0.80 to 1.25 g/cm³, water marked, the item as a yellow pin
+const LO = 0.8, HI = 1.25;
+function buildRuler(el) {
+  let html = '<span class="zone l">floats</span><span class="zone r">sinks</span><div class="bar"></div>';
+  for (let v = 80; v <= 125; v += 5) {
+    const p = ((v / 100 - LO) / (HI - LO)) * 100;
+    const major = v % 10 === 0;
+    html += `<div class="tk${major ? '' : ' minor'}" style="left:${p}%"></div>`;
+    if (major) html += `<span class="num" style="left:${p}%">${(v / 100).toFixed(1)}</span>`;
+  }
+  html += '<div class="water"><i>water</i></div><div class="pin"></div>';
+  el.innerHTML = html;
+}
+function setRuler(el, item, water) {
+  const pos = d => Math.max(0, Math.min(100, ((d - LO) / (HI - LO)) * 100)) + '%';
+  el.querySelector('.pin').style.left = pos(item);
+  el.querySelector('.water').style.left = pos(water);
+  // keep the water label from running off the right edge
+  el.querySelector('.water i').style.left = water > 1.15 ? '-52px' : '6px';
+}
+
+// ---------- the game ----------
+const act = document.getElementById('act');
+const tally = document.getElementById('tally');
+const roundEl = document.getElementById('round');
+const nameEl = document.getElementById('itemName');
+const countEl = document.getElementById('count');
+const tankCanvas = document.getElementById('tank');
+let round = 0, guess = null, results = [];
+const game = new Tank(tankCanvas, () => reveal());
+
+function drawTally() {
+  tally.innerHTML = ITEMS.map((_, i) => {
+    const res = results[i];
+    const cls = res === undefined ? (i === round ? 'now' : '') : (res ? 'right' : 'wrong');
+    return `<span class="${cls}"></span>`;
+  }).join('');
+}
+
+function startRound() {
+  const it = ITEMS[round];
+  guess = null;
+  roundEl.textContent = `Round ${round + 1} of ${ITEMS.length}`;
+  nameEl.textContent = it.name;
+  game.load(it, density(it));
+  tankCanvas.setAttribute('aria-label', `A clear bin of water with a ${it.name.toLowerCase()} hanging above it.`);
+  drawTally();
+  act.innerHTML = `
+    <p class="prompt">${it.prompt} Float or sink?</p>
+    <div class="calls">
+      <button class="plate" data-call="float" aria-pressed="false">Floats</button>
+      <button class="plate" data-call="sink" aria-pressed="false">Sinks</button>
+    </div>`;
+  act.querySelectorAll('[data-call]').forEach(b => b.addEventListener('click', () => call(b.dataset.call, b)));
+}
+
+function call(c, btn) {
+  guess = c;
+  act.querySelectorAll('[data-call]').forEach(b => { b.disabled = true; });
+  btn.setAttribute('aria-pressed', 'true');
+  // three, two, one, drop
+  let n = 3;
+  const tick = () => {
+    if (n === 0) { countEl.textContent = ''; countEl.classList.remove('on'); game.drop(); return; }
+    countEl.textContent = n;
+    countEl.classList.remove('on'); void countEl.offsetWidth; countEl.classList.add('on');
+    n--;
+    setTimeout(tick, reduced ? 350 : 620);
+  };
+  tick();
+}
+
+function reveal() {
+  const it = ITEMS[round];
+  const d = density(it);
+  const floats = d < 1;
+  const right = (guess === 'float') === floats;
+  results[round] = right;
+  drawTally();
+  tankCanvas.setAttribute('aria-label', `The ${it.name.toLowerCase()} ${floats ? 'floats' : 'sank to the bottom'}.`);
+  const last = round === ITEMS.length - 1;
+  act.innerHTML = `
+    <p class="verdict"><b class="${floats ? 'floats' : 'sinks'}">${floats ? 'Floats' : 'Sinks'}</b>
+      <span class="${right ? 'right' : 'wrong'}">${right ? 'You called it' : `You said ${guess}`}</span></p>
+    <p class="why">${it.why}</p>
+    <div class="ruler" id="ruler"></div>
+    <p class="readings"><span>${it.name} <b>${fmt(d)}</b></span><span>Water <b>1.00</b></span><span>g/cm³, approx.</span></p>
+    <div class="next-row"><button class="plate" id="next">${last ? 'See your score' : 'Next item'}</button></div>`;
+  const ruler = document.getElementById('ruler');
+  buildRuler(ruler);
+  setRuler(ruler, d, 1);
+  document.getElementById('next').addEventListener('click', () => {
+    if (last) finish(); else { round++; startRound(); }
+  });
+}
+
+function finish() {
+  const score = results.filter(Boolean).length;
+  roundEl.textContent = 'Final tally';
+  nameEl.textContent = score === 6 ? 'Perfect run' : score >= 4 ? 'Good eye' : 'Tricky, right?';
+  round = ITEMS.length;
+  drawTally();
+  const tick = '<svg viewBox="0 0 24 24" aria-label="right"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#f3c41b" stroke-width="3"/></svg>';
+  const cross = '<svg viewBox="0 0 24 24" aria-label="wrong"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="#b4bec6" stroke-width="3"/></svg>';
+  act.innerHTML = `
+    <p class="score">${score}<small> / ${ITEMS.length} called right</small></p>
+    <p class="why">Every item followed one rule. When an object’s average density is lower than water’s, it floats. When it’s higher, it sinks. Size and weight alone don’t decide it: the heavy cantaloupe floated and the tiny grapes sank. Most of the time, trapped air is what puts a fruit on the floating side.</p>
+    <ul class="results">${ITEMS.map((it, i) => `<li><span>${it.name}</span><span class="${density(it) < 1 ? 'fl' : 'sk'}">${density(it) < 1 ? 'floats' : 'sinks'}</span>${results[i] ? tick : cross}</li>`).join('')}</ul>
+    <div class="next-row">
+      <a class="plate" href="#lab" style="text-decoration:none;display:inline-flex;align-items:center">Go to the lab</a>
+      <button class="plate ghost" id="again">Play again</button>
+    </div>`;
+  document.getElementById('again').addEventListener('click', () => { round = 0; results = []; startRound(); });
+}
+
+startRound();
+
+// ---------- the lab ----------
+const picks = document.getElementById('picks');
+const air = document.getElementById('air'), salt = document.getElementById('salt');
+const airOut = document.getElementById('airOut'), saltOut = document.getElementById('saltOut');
+const labOut = document.getElementById('labOut'), labRead = document.getElementById('labRead');
+const labRuler = document.getElementById('labRuler');
+buildRuler(labRuler);
+const lab = new Tank(document.getElementById('labTank'), () => labReport());
+let labItem = ITEMS[0];
+
+picks.insertAdjacentHTML('beforeend', ITEMS.map((it, i) =>
+  `<label><input type="radio" autocomplete="off" name="pick" value="${i}"${i === 0 ? ' checked' : ''}><span>${it.name}</span></label>`).join(''));
+
+// about 18 g of salt per tablespoon; saturated brine tops out near 1.20
+const waterDensity = () => Math.min(1.2, 1 + 0.034 * +salt.value);
+const labDensity = () => labItem.flesh * (1 - air.value / 100);
+
+function labUpdate() {
+  const di = labDensity(), dw = waterDensity();
+  airOut.textContent = `${air.value}%`;
+  saltOut.textContent = +salt.value >= 6 ? '6 tbsp, maxed out' : `${salt.value} tbsp`;
+  lab.rhoItem = di; lab.rhoWater = dw;
+  setRuler(labRuler, di, dw);
+  labRead.innerHTML = `<span>${labItem.name} <b>${fmt(di)}</b></span><span>Water <b>${fmt(dw)}</b></span><span>g/cm³, approx.</span>`;
+  // the tank keeps simulating, so a slider change lifts or drops the item from where it is
+  if (lab.phase === 'settled') { lab.phase = 'fall'; lab.calm = 0; }
+  labOut.textContent = '';
+}
+function labReport() {
+  const di = labDensity(), dw = waterDensity();
+  if (di < dw) {
+    labOut.innerHTML = `Floats<small>${Math.round((di / dw) * 100)}% of it sits underwater</small>`;
+  } else {
+    labOut.innerHTML = `Sinks<small>${fmt(di - dw)} g/cm³ too dense to float</small>`;
+  }
+}
+function labLoad(i) {
+  labItem = ITEMS[i];
+  air.value = Math.round(labItem.air * 100);
+  lab.load(labItem, labDensity());
+  labUpdate();
+  setTimeout(() => { if (lab.item === labItem && lab.phase === 'hang') lab.drop(); }, reduced ? 100 : 500);
+}
+picks.addEventListener('change', e => labLoad(+e.target.value));
+air.addEventListener('input', labUpdate);
+salt.addEventListener('input', labUpdate);
+labLoad(0);
+
+// ---------- draft marks painted up the page edge ----------
+function paintDraft() {
+  const el = document.getElementById('draft');
+  const H = document.documentElement.scrollHeight;
+  el.style.height = H + 'px';
+  let html = '';
+  // one mark every 90px counted up from the keel, metres every ten marks
+  for (let k = 2, y = H - 120; y > 60; k += 2, y -= 180) {
+    html += k % 10 === 0 ? `<span class="m" style="top:${y}px">${k / 10}M</span>` : `<span style="top:${y}px">${k % 10}</span>`;
+  }
+  el.innerHTML = html;
+}
+addEventListener('load', paintDraft);
+addEventListener('resize', paintDraft);
+</script>
+</body>
+</html>
